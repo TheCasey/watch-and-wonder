@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#234d43" />
+    <title>Watch & Wonder</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <aside class="sidebar">
+      <a class="brand" href="/"
+        ><span class="brand-icon" aria-hidden="true">w<span>✦</span></span
+        ><span>Watch &amp;<br />Wonder</span></a
+      >
+      <button id="new-lesson" class="button primary wide">
+        <span aria-hidden="true">＋</span> New lesson
+      </button>
+      <div class="library-label">YOUR LEARNING LIBRARY</div>
+      <div id="library" class="library"></div>
+      <div class="sidebar-bottom">
+        <span class="local-dot"></span> A little more curious, every day.<button
+          id="settings-open"
+          class="settings-link"
+        >
+          ⚙ &nbsp; Setup &amp; connection
+        </button>
+      </div>
+    </aside>
+    <main>
+      <header class="topbar">
+        <span>YOUR HOME FOR CURIOUS MINDS</span
+        ><button id="connection" class="connection">
+          <span class="local-dot"></span> Local workspace
+        </button>
+      </header>
+      <div id="notice" class="notice" role="status" hidden></div>
+      <section id="create-view" class="view">
+        <div class="eyebrow">FROM WATCHING TO UNDERSTANDING</div>
+        <h1>Big ideas.<br /><em>Room to wonder.</em></h1>
+        <p class="lede">
+          Turn a video into a thoughtful learning experience.<br />Guided notes,
+          good questions, and something to try.
+        </p>
+        <div class="builder-layout">
+          <div class="builder">
+            <section class="panel source-panel">
+              <div class="step-title">
+                <span class="step">1</span>
+                <h2>Start with something worth watching</h2>
+              </div>
+              <div class="source-tabs" role="tablist" aria-label="Source type">
+                <button
+                  class="active"
+                  id="url-tab"
+                  role="tab"
+                  aria-selected="true"
+                >
+                  ↗ &nbsp; Video link</button
+                ><button id="script-tab" role="tab" aria-selected="false">
+                  ≡ &nbsp; Transcript or script
+                </button>
+              </div>
+              <div id="url-input">
+                <label for="video-url">VIDEO LINK</label
+                ><input
+                  id="video-url"
+                  type="url"
+                  placeholder="Paste a YouTube or PBS video link…"
+                />
+                <p class="hint">
+                  We’ll transcribe the audio on your computer with Whisper.
+                </p>
+              </div>
+              <div id="script-input" hidden>
+                <label for="script">TRANSCRIPT OR SCRIPT</label
+                ><textarea
+                  id="script"
+                  rows="9"
+                  placeholder="Paste the actual transcript, movie script, or subtitles here…"
+                ></textarea>
+                <div class="inline">
+                  <label class="file-label" for="script-file"
+                    >Or open a .txt, .srt, or .vtt file</label
+                  ><input
+                    id="script-file"
+                    type="file"
+                    accept=".txt,.srt,.vtt,.md,text/plain"
+                  /><span id="script-count" class="hint"></span>
+                </div>
+                <p class="hint">
+                  Your text is the source of truth. Plain scripts use paragraph
+                  references, without invented video timings.
+                </p>
+              </div>
+              <label for="lesson-title"
+                >LESSON TITLE <span class="optional">optional</span></label
+              ><input
+                id="lesson-title"
+                maxlength="180"
+                placeholder="e.g. The surprisingly clever world of bridges"
+              />
+            </section>
+            <section class="panel">
+              <div class="step-title">
+                <span class="step">2</span>
+                <h2>Make it their kind of learning</h2>
+              </div>
+              <div class="two-columns">
+                <div>
+                  <label for="reading-level">READING LEVEL</label
+                  ><select id="reading-level">
+                    <option value="early">Early readers · K–2</option>
+                    <option value="elementary">Elementary · Grades 3–5</option>
+                    <option value="middle" selected>
+                      Middle school · Grades 6–8
+                    </option>
+                    <option value="high">High school</option>
+                    <option value="adult">Adult / independent learning</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="paper">PAPER SIZE</label
+                  ><select id="paper">
+                    <option value="LETTER">US Letter</option>
+                    <option value="A4">A4</option>
+                  </select>
+                </div>
+              </div>
+              <label>HOW MUCH SHOULD THEY CAPTURE?</label>
+              <div id="density" class="density">
+                <button type="button" data-value="main">
+                  <strong>Main ideas</strong
+                  ><span>Watch more. Write less.</span></button
+                ><button type="button" data-value="balanced" class="selected">
+                  <strong>Balanced</strong
+                  ><span>The ideas + a little detail</span></button
+                ><button type="button" data-value="detailed">
+                  <strong>Detailed</strong
+                  ><span>A closer look at the content</span>
+                </button>
+              </div>
+              <label>ON THE GUIDED WORKSHEET</label>
+              <div id="section-choices" class="section-choices">
+                <label class="choice"
+                  ><input type="checkbox" value="blanks" checked /><span
+                    ><strong>Fill in the blanks</strong
+                    ><small>Key ideas with a word or two missing</small></span
+                  ></label
+                >
+                <label class="choice"
+                  ><input type="checkbox" value="watch" checked /><span
+                    ><strong>While-you-watch questions</strong
+                    ><small
+                      >Notice, listen, and put ideas into words</small
+                    ></span
+                  ></label
+                >
+                <label class="choice"
+                  ><input type="checkbox" value="reflection" checked /><span
+                    ><strong>After-video reflections</strong
+                    ><small
+                      >Make connections and think a little deeper</small
+                    ></span
+                  ></label
+                >
+                <label class="choice"
+                  ><input type="checkbox" value="activity" /><span
+                    ><strong>A hands-on activity</strong
+                    ><small
+                      >Build, make, or try something they learned</small
+                    ></span
+                  ><span class="mini-tag">TRY IT</span></label
+                >
+                <label class="choice"
+                  ><input type="checkbox" value="vocabulary" /><span
+                    ><strong>Words to know</strong
+                    ><small>Important terms in their own words</small></span
+                  ></label
+                >
+                <label class="choice"
+                  ><input type="checkbox" value="sequence" /><span
+                    ><strong>Put it in order</strong
+                    ><small>Connect the steps or follow the story</small></span
+                  ></label
+                >
+                <label class="choice"
+                  ><input type="checkbox" value="sketch" /><span
+                    ><strong>Sketch &amp; explain</strong
+                    ><small>A little space for visual thinkers</small></span
+                  ></label
+                >
+              </div>
+              <div class="extras">
+                <label
+                  >SEPARATE STUDY TOOLS
+                  <span class="optional">optional</span></label
+                >
+                <div class="two-columns">
+                  <label class="check-pill"
+                    ><input id="flashcards" type="checkbox" /> Flashcards</label
+                  ><label class="check-pill"
+                    ><input id="quiz" type="checkbox" /> Practice quiz</label
+                  >
+                </div>
+                <p class="hint">
+                  Their own printables and study views, separate from guided
+                  notes.
+                </p>
+              </div>
+              <details>
+                <summary>Fine-tune the printout</summary>
+                <div class="two-columns">
+                  <div>
+                    <label for="lines">WRITING SPACE</label
+                    ><select id="lines">
+                      <option value="compact">Compact</option>
+                      <option value="standard" selected>Standard</option>
+                      <option value="roomy">Extra room</option>
+                    </select>
+                  </div>
+                  <label class="check-pill"
+                    ><input type="checkbox" id="word-bank" checked /> Include a
+                    word bank</label
+                  >
+                </div>
+                <label for="parent-notes">LEARNING GOALS OR PREFERENCES</label
+                ><textarea
+                  id="parent-notes"
+                  rows="3"
+                  maxlength="1500"
+                  placeholder="e.g. Focus on how the design changes. Keep the activity simple enough for a rainy afternoon."
+                ></textarea>
+              </details>
+            </section>
+            <button id="import" class="button primary create-button">
+              Review the transcript <span aria-hidden="true">→</span>
+            </button>
+            <p class="privacy-line">
+              Local transcription. Your transcript goes to ChatGPT only when you
+              create a worksheet.
+            </p>
+          </div>
+          <aside class="preview-aside">
+            <div class="preview-label">A LITTLE PREVIEW OF WHAT’S AHEAD</div>
+            <div class="paper-stack">
+              <div class="paper">
+                <div class="paper-brand">WATCH &amp; WONDER</div>
+                <h3>Your next<br />great discovery</h3>
+                <div class="paper-subtitle">A GUIDE FOR CURIOUS MINDS</div>
+                <div class="name-line">
+                  Name ____________________ &nbsp; Date ________
+                </div>
+                <h4>While you watch</h4>
+                <p>
+                  1. What’s the big idea? Listen for what<br />
+                  &nbsp; makes this topic worth exploring.
+                </p>
+                <div class="ruled"></div>
+                <div class="ruled"></div>
+                <h4>Connect the dots</h4>
+                <p>
+                  A good question can be the beginning<br />of a whole new idea.
+                </p>
+                <div class="ruled"></div>
+                <div class="ruled"></div>
+                <div class="preview-example">ILLUSTRATIVE PREVIEW</div>
+              </div>
+              <div class="curiosity-stamp">
+                notice.<br />question.<br /><em>discover.</em>
+              </div>
+            </div>
+            <div class="aside-note">
+              <span>✧</span>
+              <div>
+                <strong>Made for the way they learn.</strong>
+                <p>
+                  Less busywork. More noticing, connecting, and trying things
+                  out.
+                </p>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+      <section id="lesson-view" class="view" hidden>
+        <div class="lesson-heading">
+          <div>
+            <div class="eyebrow">YOUR LEARNING LIBRARY</div>
+            <h1 id="saved-title" class="saved-title"></h1>
+            <p id="saved-source" class="hint"></p>
+          </div>
+          <button id="rename" class="button subtle">Rename</button>
+        </div>
+        <div id="job-status" class="job-status" role="status"></div>
+        <div class="lesson-tabs" role="tablist" aria-label="Lesson views">
+          <button data-view="worksheet" class="active">Worksheet</button
+          ><button data-view="transcript">Transcript</button
+          ><button data-view="cards">Flashcards</button
+          ><button data-view="quiz">Practice quiz</button>
+        </div>
+        <div id="worksheet-pane" class="lesson-pane">
+          <div class="toolbar">
+            <div>
+              <h2>Make room for good ideas.</h2>
+              <p class="hint">
+                Preview the student copy, then print what you need.
+              </p>
+            </div>
+            <div class="toolbar-actions">
+              <button id="guided-download" class="button primary">
+                ↓ Guided notes PDF</button
+              ><button id="key-download" class="button">↓ Answer key</button
+              ><button id="edit-worksheet" class="button subtle">
+                Edit questions
+              </button>
+            </div>
+          </div>
+          <div id="worksheet-preview"></div>
+        </div>
+        <div id="transcript-pane" class="lesson-pane" hidden>
+          <div class="toolbar">
+            <div>
+              <h2>The source of truth</h2>
+              <p class="hint">
+                Check names and details here before creating the worksheet.
+              </p>
+            </div>
+            <div class="toolbar-actions">
+              <button id="transcript-download" class="button">
+                ↓ Transcript</button
+              ><button id="edit-transcript" class="button">
+                Edit transcript
+              </button>
+            </div>
+          </div>
+          <div id="transcript-content" class="transcript-content"></div>
+          <div id="transcript-editor" hidden>
+            <label for="transcript-text">EDIT TRANSCRIPT / SUBTITLES</label
+            ><textarea id="transcript-text" rows="22"></textarea>
+            <p class="hint">
+              Subtitle timings are kept when you edit SRT. For plain text,
+              source references become paragraph numbers. Existing worksheets
+              stay saved until you generate again.
+            </p>
+            <button id="save-transcript" class="button primary">
+              Save transcript</button
+            ><button id="cancel-transcript" class="button">Cancel</button>
+          </div>
+        </div>
+        <div id="cards-pane" class="lesson-pane" hidden>
+          <div class="toolbar">
+            <div>
+              <h2>A little practice goes a long way.</h2>
+              <p class="hint">Think of your answer, then turn the card over.</p>
+            </div>
+            <div class="toolbar-actions">
+              <button id="cards-download" class="button">
+                ↓ Printable cards</button
+              ><button id="cards-tsv" class="button">↓ Anki TSV</button>
+            </div>
+          </div>
+          <div id="cards-content"></div>
+        </div>
+        <div id="quiz-pane" class="lesson-pane" hidden>
+          <div class="toolbar">
+            <div>
+              <h2>What stuck with you?</h2>
+              <p class="hint">
+                Practice at your own pace. Answers stay hidden until you check.
+              </p>
+            </div>
+            <div class="toolbar-actions">
+              <button id="quiz-download" class="button">↓ Quiz PDF</button
+              ><button id="quiz-key-download" class="button">↓ Quiz key</button>
+            </div>
+          </div>
+          <div id="quiz-content"></div>
+        </div>
+        <details id="versions" class="version-history" hidden>
+          <summary>Saved worksheet versions</summary>
+          <label for="version-picker">VERSION</label
+          ><select id="version-picker"></select>
+          <button id="restore-version" class="button">
+            Restore this version
+          </button>
+        </details>
+        <div class="lesson-footer">
+          <button id="customize" class="button">
+            Customize &amp; generate again</button
+          ><button id="retry" class="button" hidden>Retry saved progress</button
+          ><button id="delete-lesson" class="button danger">
+            Delete lesson</button
+          ><span id="version-count" class="hint"></span
+          ><button id="export-json" class="button subtle">
+            Export worksheet JSON
+          </button>
+        </div>
+      </section>
+    </main>
+    <dialog id="settings-dialog">
+      <div class="dialog-heading">
+        <div>
+          <div class="eyebrow">A FEW THINGS BEFORE YOU BEGIN</div>
+          <h2>Your local learning studio</h2>
+        </div>
+        <button
+          class="close-dialog"
+          data-close="settings-dialog"
+          aria-label="Close settings"
+        >
+          ×
+        </button>
+      </div>
+      <div id="setup-health"></div>
+      <section class="settings-section">
+        <h3>ChatGPT connection</h3>
+        <p>
+          Worksheets use your connected ChatGPT plan. Your transcript and
+          learning preferences are sent to OpenAI when you generate. Audio stays
+          on your computer.
+        </p>
+        <div id="account-status"></div>
+        <div class="toolbar-actions">
+          <button id="sign-in" class="button primary">
+            Continue with ChatGPT</button
+          ><button id="sign-out" class="button" hidden>Sign out</button
+          ><a
+            class="button subtle"
+            href="https://chatgpt.com/settings/usage"
+            target="_blank"
+            rel="noreferrer"
+            >Manage usage ↗</a
+          >
+        </div>
+        <label for="account-picker">SAVED ACCOUNTS</label
+        ><select id="account-picker"></select
+        ><button id="add-account" class="button subtle">
+          Connect another account</button
+        ><label for="model-picker">WORKSHEET MODEL</label
+        ><select id="model-picker">
+          <option value="">Account default</option>
+        </select>
+        <p class="hint">
+          Account eligibility and plan limits apply. No API key is required.
+        </p>
+      </section>
+      <section class="settings-section">
+        <h3>Private, local library</h3>
+        <p id="library-location" class="hint"></p>
+        <p class="hint">
+          Scripts and generated materials stay here until deleted. A plain
+          script can differ from the final film; use the version you plan to
+          show.
+        </p>
+      </section>
+    </dialog>
+    <dialog id="customize-dialog">
+      <div class="dialog-heading">
+        <h2>Shape this lesson</h2>
+        <button
+          class="close-dialog"
+          data-close="customize-dialog"
+          aria-label="Close"
+        >
+          ×
+        </button>
+      </div>
+      <div id="customize-options"></div>
+      <p class="hint">
+        Creating a worksheet sends this transcript and your preferences to your
+        connected ChatGPT account. Previous worksheet versions stay saved.
+      </p>
+      <button id="generate" class="button primary wide">
+        Create the worksheet →
+      </button>
+    </dialog>
+    <dialog id="edit-dialog">
+      <div class="dialog-heading">
+        <h2>Make it your own</h2>
+        <button
+          class="close-dialog"
+          data-close="edit-dialog"
+          aria-label="Close"
+        >
+          ×
+        </button>
+      </div>
+      <p class="hint">
+        Edit prompts and answers before printing. Source references are
+        preserved; check your changes against the transcript.
+      </p>
+      <div id="edit-content"></div>
+      <button id="save-worksheet" class="button primary wide">
+        Save edits
+      </button>
+    </dialog>
+    <dialog id="rename-dialog">
+      <h2>Name this lesson</h2>
+      <label for="rename-title">LESSON TITLE</label
+      ><input id="rename-title" maxlength="180" />
+      <div class="toolbar-actions">
+        <button data-close="rename-dialog" class="button">Cancel</button
+        ><button id="save-title" class="button primary">Save title</button>
+      </div>
+    </dialog>
+    <dialog id="confirm-dialog">
+      <h2>Delete this lesson?</h2>
+      <p>
+        This permanently removes its transcript, worksheets, and saved versions
+        from this app’s local library.
+      </p>
+      <div class="toolbar-actions">
+        <button id="confirm-cancel" class="button">Keep lesson</button
+        ><button id="confirm-delete" class="button danger">
+          Delete lesson
+        </button>
+      </div>
+    </dialog>
+  </body>
+</html>

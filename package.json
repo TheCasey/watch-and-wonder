@@ -1,0 +1,35 @@
+{
+  "name": "watch-and-wonder",
+  "version": "0.1.0",
+  "description": "Turn videos and scripts into grounded printable learning worksheets, locally.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.9.0"
+  },
+  "main": "desktop/main.cjs",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server/index.js",
+    "desktop": "electron .",
+    "setup:local": "node --env-file-if-exists=.env scripts/setup-local.js",
+    "test": "node --test test/*.test.js",
+    "check": "node scripts/check.js",
+    "build:mac": "node scripts/build-mac.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "jose": "^6.2.13",
+    "pdfkit": "^0.17.2"
+  },
+  "devDependencies": {
+    "@electron/packager": "^20.3.0",
+    "electron": "^45.0.0",
+    "pdfjs-dist": "^6.4.299",
+    "playwright": "^1.64.1"
+  },
+  "overrides": {
+    "glob": "^14.0.2",
+    "minimatch": "^11.0.1"
+  }
+}

@@ -1,0 +1,12 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.local/
+models/*.bin
+models/*.part
+release/
+tmp/
+output/
+.DS_Store
+*.log
