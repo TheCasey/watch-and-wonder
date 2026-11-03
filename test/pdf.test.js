@@ -78,3 +78,59 @@ test("long cards fit inside page margins without dropping their final text", asy
   assert.match(text, /FRONT_END/);
   assert.match(text, /BACK_END/);
 });
+
+test("guided notes and answer keys share interleaved chronology, numbering, and one word bank", async () => {
+  const mixed = structuredClone(lesson);
+  mixed.settings.wordBank = true;
+  mixed.transcript.segments = [
+    { text: "First fact.", startMs: 0, endMs: 1000 },
+    { text: "Middle fact.", startMs: 2000, endMs: 3000 },
+    { text: "Last fact.", startMs: 4000, endMs: 5000 },
+  ];
+  const question = (prompt, sourceId, quote) => ({
+    ...structuredClone(item),
+    prompt,
+    evidence: [{ sourceId, quote }],
+  });
+  mixed.worksheet.sections = [
+    {
+      kind: "blanks",
+      items: [question("MIDDLE_BLANK ___", "s2", "Middle fact.")],
+    },
+    {
+      kind: "reflection",
+      items: [question("REFLECTION_AFTERWARD", "s1", "First fact.")],
+    },
+    {
+      kind: "watch",
+      items: [
+        question("LATE_QUESTION", "s3", "Last fact."),
+        question("EARLY_QUESTION", "s1", "First fact."),
+      ],
+    },
+  ];
+  for (const kind of ["guided", "key"]) {
+    const text = await textOf(await renderPDF({ lesson: mixed, kind }));
+    const labels = [
+      "1. EARLY_QUESTION",
+      "2. MIDDLE_BLANK",
+      "3. LATE_QUESTION",
+      "4. REFLECTION_AFTERWARD",
+    ];
+    for (const label of labels) assert.ok(text.includes(label), label);
+    assert.ok(
+      labels.every(
+        (label, i) =>
+          i === 0 || text.indexOf(labels[i - 1]) < text.indexOf(label),
+      ),
+    );
+    assert.equal(
+      (text.match(/Word bank:/g) || []).length,
+      kind === "guided" ? 1 : 0,
+    );
+    if (kind === "guided") {
+      assert.doesNotMatch(text, /\d{2}:\d{2}:\d{2}/);
+      assert.match(text, /MIDDLE_BLANK _{28,}/);
+    }
+  }
+});

@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { LABELS } from "./worksheet.js";
 import { sourceSegments } from "./source.js";
 import { timestamp } from "./transcript.js";
+import { worksheetFlow, orderBySource } from "../public/worksheet-order.js";
 const font = (name) =>
   fileURLToPath(
     new URL(`../assets/fonts/NotoSans-${name}.ttf`, import.meta.url),
@@ -248,31 +249,36 @@ export async function renderPDF({ lesson, kind = "guided" }) {
       }
     } else if (kind === "quiz" || kind === "quiz-key") {
       heading("Check what you learned");
-      worksheet.quiz.forEach((entry, index) => item(entry, index, "quiz"));
+      orderBySource(worksheet.quiz, lesson.transcript).forEach((entry, index) =>
+        item(entry, index, "quiz"),
+      );
     } else {
-      for (const section of worksheet.sections) {
+      let questionIndex = 0;
+      for (const group of worksheetFlow(worksheet, lesson.transcript)) {
         body();
-        const firstHeight = doc.heightOfString(section.items[0]?.prompt || "", {
-          width,
-          lineGap: 3,
-        });
+        const firstHeight = doc.heightOfString(
+          group.items[0]?.item.prompt || "",
+          { width, lineGap: 3 },
+        );
         ensure(Math.min(560, firstHeight + 180));
-        heading(LABELS[section.kind]);
-        if (section.kind === "blanks" && lesson.settings.wordBank && !key) {
-          const words = [...new Set(section.items.map((i) => i.answer))].sort(
-            (a, b) => a.localeCompare(b),
-          );
+        heading(
+          group.kind === "during" ? "While you watch" : LABELS[group.kind],
+        );
+        const blanks = group.items.filter((entry) => entry.kind === "blanks");
+        if (blanks.length && lesson.settings.wordBank && !key) {
+          const words = [
+            ...new Set(blanks.map((entry) => entry.item.answer)),
+          ].sort((a, b) => a.localeCompare(b));
           paragraph(`Word bank: ${words.join("  /  ")}`, 9, "#516462");
         }
-        if (section.kind === "activity")
+        if (group.kind === "activity")
           paragraph(
             "Suggested extension - apply an idea from the video. Read the whole activity with an adult before starting.",
             9,
             "#516462",
           );
-        section.items.forEach((entry, index) =>
-          item(entry, index, section.kind),
-        );
+        for (const entry of group.items)
+          item(entry.item, questionIndex++, entry.kind);
       }
     }
     const range = doc.bufferedPageRange();

@@ -1,3 +1,4 @@
+import { worksheetFlow, orderBySource } from "./worksheet-order.js";
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const state = {
@@ -248,20 +249,30 @@ function renderWorksheet() {
         "This lesson has separate study tools. Open Flashcards or Practice quiz above.",
       ),
     );
-  for (const section of worksheet.sections) {
-    paper.append(el("h3", labels[section.kind]));
+  let questionIndex = 0;
+  for (const group of worksheetFlow(
+    worksheet,
+    state.active.worksheetTranscript || state.active.transcript,
+  )) {
+    paper.append(
+      el(
+        "h3",
+        group.kind === "during" ? "While you watch" : labels[group.kind],
+      ),
+    );
+    const blanks = group.items.filter((entry) => entry.kind === "blanks");
     if (
-      section.kind === "blanks" &&
+      blanks.length &&
       (state.active.worksheetSettings || state.active.settings).wordBank
     )
       paper.append(
         el(
           "p",
-          `Word bank: ${[...new Set(section.items.map((i) => i.answer))].sort().join(" · ")}`,
+          `Word bank: ${[...new Set(blanks.map((entry) => entry.item.answer))].sort().join(" · ")}`,
           "hint",
         ),
       );
-    if (section.kind === "activity")
+    if (group.kind === "activity")
       paper.append(
         el(
           "p",
@@ -269,10 +280,10 @@ function renderWorksheet() {
           "hint",
         ),
       );
-    section.items.forEach((item, index) => {
-      const node = el("div", undefined, `worksheet-item ${section.kind}`);
+    for (const { kind, item } of group.items) {
+      const node = el("div", undefined, `worksheet-item ${kind}`);
       const prompt =
-        section.kind === "blanks"
+        kind === "blanks"
           ? item.prompt.replace(
               /_{3,}/g,
               "_".repeat(
@@ -281,12 +292,12 @@ function renderWorksheet() {
             )
           : item.prompt;
       node.append(
-        el("div", `${index + 1}. ${prompt}`),
+        el("div", `${++questionIndex}. ${prompt}`),
         el("div", "", "answer-lines"),
         reference(item),
       );
       paper.append(node);
-    });
+    }
   }
   area.append(paper);
   const text = el(
@@ -382,7 +393,10 @@ function renderCards() {
   area.append(box, controls);
 }
 function renderQuiz() {
-  const quiz = state.active.worksheet?.quiz || [],
+  const quiz = orderBySource(
+      state.active.worksheet?.quiz || [],
+      state.active.worksheetTranscript || state.active.transcript,
+    ),
     area = $("#quiz-content");
   area.replaceChildren();
   $("#quiz-download").disabled = !quiz.length;

@@ -18,7 +18,7 @@ Choose any combination of:
 - Separate flashcards: a revealable study view, cut-and-fold PDF, and Anki-compatible TSV
 - A separate practice quiz with interactive checking, a student PDF, and an answer-key PDF
 
-Three density levels—**Main ideas**, **Balanced**, and **Detailed**—control how much to capture. Reading level is a separate choice, from early readers to adults. Pick US Letter or A4 paper and compact, standard, or extra writing space. Page count depends on source length and selected sections; density is a generation target rather than an exact question count.
+Three density levels—**Main ideas**, **Balanced**, and **Detailed**—control how much to capture. Reading level is a separate choice, from early readers to adults. Guided notes interleave question types in video order, with continuous numbering and one optional word bank. A question that uses several source moments appears after all of them have been covered. Plain scripts use paragraph order. Reflections and application activities follow the video questions; teacher keys use the same order. Pick US Letter or A4 paper and compact, standard, or extra writing space. Page count depends on source length and selected sections; density is a generation target rather than an exact question count.
 
 [See a sample guided-notes PDF](docs/sample-guided-notes.pdf). This sample uses an original paper-bridge demonstration script, not a transcript of a real video.
 

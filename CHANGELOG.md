@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.4 - 2026-11-03
+
+- Interleave all while-you-watch question types in video order in the app, guided-notes PDFs, and matching teacher keys.
+- Place questions after all referenced information has been covered; use paragraph order for untimed scripts. Keep reflections and application activities afterward.
+- Use continuous question numbers and a single optional word bank. Existing lessons use the new ordering without regeneration.
+- Order separate practice-quiz questions by the same source chronology.
+
 ## 0.1.3 - 2026-11-03
 
 - Widen fill-in-the-blank writing spaces in the app preview and PDF exports, with extra room for longer answers. Existing lessons use the new spacing without regeneration.

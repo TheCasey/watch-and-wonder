@@ -38,3 +38,9 @@ The original detailed-generation failure was a model draft with an item missing 
 The expanded suite passes 36 tests. New regressions cover missing evidence, fabricated quotes, precise correction paths, malformed JSON/null items, repair exhaustion, quota errors without automatic retry, full ordered source coverage in smaller detailed batches, recovery from an invalid cache, and plan-authenticated structured-output transport. A live schema-constrained request with the connected ChatGPT plan was also verified.
 
 Live regression: the saved transcript for `https://youtu.be/Sc2iVJ2vOos` was regenerated with Detailed density, middle-school reading level, and only blanks/watch sections. All three parts passed on their first schema-constrained draft, producing 10 blanks and 12 watch questions. Both the student guided-notes PDF and teacher answer-key PDF exported successfully. No transcript reimport or deletion was required.
+
+## Version 0.1.4: chronological guided notes
+
+The shared app/PDF ordering helper interleaves blanks, written questions, vocabulary, sequencing, and sketch prompts using the latest required source moment. Untimed scripts use paragraph/quote order; reflections and application activities remain afterward. Student sheets and teacher keys use the same continuous numbering. Separate quiz views/exports also share source order. Existing saved lessons require no regeneration.
+
+All 40 automated tests pass, including mixed question types, multi-source questions, stable ties, plain-script ordering, matching PDF/key numbering, one word bank, wide blanks, and no student timestamps. Both PDFs for the saved elections lesson were exported with all 22 questions verified in the expected interleaved order.
