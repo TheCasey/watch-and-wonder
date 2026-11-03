@@ -1,6 +1,6 @@
 {
   "name": "watch-and-wonder",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Turn videos and scripts into grounded printable learning worksheets, locally.",
   "type": "module",
   "private": true,

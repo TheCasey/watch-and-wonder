@@ -89,7 +89,17 @@ export async function renderPDF({ lesson, kind = "guided" }) {
   };
   const item = (entry, index, section) => {
     body();
-    const label = `${index + 1}. ${entry.prompt}`;
+    // Render placeholder tokens as handwriting space without changing saved prompts.
+    const prompt =
+      section === "blanks"
+        ? entry.prompt.replace(
+            /_{3,}/g,
+            "_".repeat(
+              Math.max(28, Math.min(56, [...entry.answer].length * 2)),
+            ),
+          )
+        : entry.prompt;
+    const label = `${index + 1}. ${prompt}`;
     const promptHeight = doc.heightOfString(label, { width, lineGap: 3 });
     const baseLines =
       { compact: 1, standard: 3, roomy: 5 }[lesson.settings.lines] || 3;

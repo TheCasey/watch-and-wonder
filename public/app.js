@@ -271,8 +271,17 @@ function renderWorksheet() {
       );
     section.items.forEach((item, index) => {
       const node = el("div", undefined, `worksheet-item ${section.kind}`);
+      const prompt =
+        section.kind === "blanks"
+          ? item.prompt.replace(
+              /_{3,}/g,
+              "_".repeat(
+                Math.max(28, Math.min(56, [...item.answer].length * 2)),
+              ),
+            )
+          : item.prompt;
       node.append(
-        el("div", `${index + 1}. ${item.prompt}`),
+        el("div", `${index + 1}. ${prompt}`),
         el("div", "", "answer-lines"),
         reference(item),
       );
