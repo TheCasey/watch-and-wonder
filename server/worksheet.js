@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { fail, sourceSegments } from "./source.js";
+import { worksheetSchema } from "./worksheet-schema.js";
 
 export const KINDS = [
   "blanks",
@@ -69,13 +70,31 @@ export function chunkSegments(segments, limit = 22000) {
   if (chunk.length) chunks.push(chunk);
   return chunks;
 }
+function invalid(message) {
+  return Object.assign(fail(message), { code: "INVALID_WORKSHEET" });
+}
+function atPath(path, check) {
+  try {
+    return check();
+  } catch (error) {
+    if (error.code === "INVALID_WORKSHEET")
+      error.validationPath = error.validationPath
+        ? `${path}.${error.validationPath}`
+        : path;
+    throw error;
+  }
+}
 function evidence(value, lookup) {
-  if (!Array.isArray(value) || !value.length || value.length > 8)
-    throw fail(
+  if (Array.isArray(value) && value.length > 8)
+    throw invalid(
+      "Generated material has too many source references for one item. Use one to eight exact source quotes per item.",
+    );
+  if (!Array.isArray(value) || !value.length)
+    throw invalid(
       "Generated material is missing source evidence. Retry generation.",
     );
   return value.map((e) => {
-    const source = lookup.get(e.sourceId);
+    const source = e && lookup.get(e.sourceId);
     if (
       !source ||
       typeof e.quote !== "string" ||
@@ -83,7 +102,7 @@ function evidence(value, lookup) {
       e.quote.length > 1000 ||
       !clean(source.text).includes(clean(e.quote))
     )
-      throw fail(
+      throw invalid(
         "Generated material cited text that was not in the transcript. The previous worksheet was kept. Retry generation.",
       );
     return { sourceId: e.sourceId, quote: e.quote.trim() };
@@ -91,7 +110,9 @@ function evidence(value, lookup) {
 }
 const bounded = (value, limit, label) => {
   if (typeof value !== "string" || !value.trim() || value.length > limit)
-    throw fail(`Generated ${label} is missing or too long. Retry generation.`);
+    throw invalid(
+      `Generated ${label} is missing or too long. Retry generation.`,
+    );
   return value.trim();
 };
 export function validateWorksheet(
@@ -106,7 +127,7 @@ export function validateWorksheet(
     !Array.isArray(value.flashcards) ||
     !Array.isArray(value.quiz)
   )
-    throw fail(
+    throw invalid(
       "ChatGPT returned an unexpected worksheet format. Retry generation.",
     );
   if (
@@ -114,13 +135,17 @@ export function validateWorksheet(
     value.flashcards.length > 2000 ||
     value.quiz.length > 2000
   )
-    throw fail("Generated worksheet exceeded the supported size.");
+    throw invalid("Generated worksheet exceeded the supported size.");
   const lookup = new Map(segments.map((s) => [s.id, s]));
   const item = (x, kind) => {
+    if (!x || typeof x !== "object")
+      throw invalid(
+        "Generated question has an invalid format. Retry generation.",
+      );
     const result = {
       prompt: bounded(x.prompt, 4000, "question"),
       answer: bounded(x.answer, 4000, "answer"),
-      evidence: evidence(x.evidence, lookup),
+      evidence: atPath("evidence", () => evidence(x.evidence, lookup)),
       choices: Array.isArray(x.choices)
         ? x.choices.map((c) => bounded(c, 500, "choice")).slice(0, 6)
         : [],
@@ -132,7 +157,7 @@ export function validateWorksheet(
           clean(e.quote).includes(clean(result.answer)),
         ))
     )
-      throw fail(
+      throw invalid(
         "A fill-in-the-blank answer could not be verified in the source. Retry generation.",
       );
     if (
@@ -141,53 +166,70 @@ export function validateWorksheet(
         result.choices.length < 2 ||
         new Set(result.choices).size !== result.choices.length)
     )
-      throw fail("A quiz has invalid answer choices. Retry generation.");
+      throw invalid("A quiz has invalid answer choices. Retry generation.");
     return result;
   };
-  const sections = value.sections.map((section) => {
-    if (
-      !settings.sections.includes(section.kind) ||
-      !Array.isArray(section.items) ||
-      !section.items.length ||
-      section.items.length > 2000
-    )
-      throw fail(
-        "Generated worksheet sections do not match your selection. Retry generation.",
-      );
-    return {
-      kind: section.kind,
-      heading: LABELS[section.kind],
-      items: section.items
-        .map((x) => item(x, section.kind))
-        .sort(
-          (a, b) =>
-            Math.min(...a.evidence.map((e) => +e.sourceId.slice(1))) -
-            Math.min(...b.evidence.map((e) => +e.sourceId.slice(1))),
-        ),
-    };
-  });
-  const flashcards = value.flashcards.map((x) => ({
-    front: bounded(x.front, 800, "flashcard"),
-    back: bounded(x.back, 1800, "flashcard answer"),
-    evidence: evidence(x.evidence, lookup),
-  }));
-  const quiz = value.quiz.map((x) => item(x, "quiz"));
+  const sections = value.sections.map((section, sectionIndex) =>
+    atPath(`sections[${sectionIndex}]`, () => {
+      if (
+        !section ||
+        !settings.sections.includes(section.kind) ||
+        !Array.isArray(section.items) ||
+        !section.items.length ||
+        section.items.length > 2000
+      )
+        throw invalid(
+          "Generated worksheet sections do not match your selection. Retry generation.",
+        );
+      return {
+        kind: section.kind,
+        heading: LABELS[section.kind],
+        items: section.items
+          .map((x, itemIndex) =>
+            atPath(`items[${itemIndex}]`, () => item(x, section.kind)),
+          )
+          .sort(
+            (a, b) =>
+              Math.min(...a.evidence.map((e) => +e.sourceId.slice(1))) -
+              Math.min(...b.evidence.map((e) => +e.sourceId.slice(1))),
+          ),
+      };
+    }),
+  );
+  const flashcards = value.flashcards.map((x, index) =>
+    atPath(`flashcards[${index}]`, () => {
+      if (!x || typeof x !== "object")
+        throw invalid(
+          "Generated flashcard has an invalid format. Retry generation.",
+        );
+      return {
+        front: bounded(x.front, 800, "flashcard"),
+        back: bounded(x.back, 1800, "flashcard answer"),
+        evidence: atPath("evidence", () => evidence(x.evidence, lookup)),
+      };
+    }),
+  );
+  const quiz = value.quiz.map((x, index) =>
+    atPath(`quiz[${index}]`, () => item(x, "quiz")),
+  );
   if (
     (!settings.flashcards && flashcards.length) ||
     (!settings.quiz && quiz.length)
   )
-    throw fail("Unrequested study tools were returned. Retry generation.");
+    throw invalid("Unrequested study tools were returned. Retry generation.");
   if (!partial) {
     for (const kind of settings.sections)
       if (!sections.some((s) => s.kind === kind))
-        throw fail(`The ${LABELS[kind]} section is missing. Retry generation.`);
+        throw invalid(
+          `The ${LABELS[kind]} section is missing. Retry generation.`,
+        );
     if (
       (settings.flashcards && !flashcards.length) ||
       (settings.quiz && !quiz.length)
     )
-      throw fail("A selected study tool is missing. Retry generation.");
+      throw invalid("A selected study tool is missing. Retry generation.");
     if (!sections.length && !flashcards.length && !quiz.length)
-      throw fail("No learning material was generated. Retry generation.");
+      throw invalid("No learning material was generated. Retry generation.");
   }
   return {
     title: bounded(value.title, 180, "title"),
@@ -209,11 +251,62 @@ function parseResponse(text) {
       text.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, ""),
     );
   } catch {
-    throw fail(
+    throw invalid(
       "ChatGPT did not return readable worksheet JSON. Retry the saved transcript.",
     );
   }
 }
+async function generateValidatedPart({
+  request,
+  segments,
+  settings,
+  generate,
+  progress,
+  stage,
+  partial = false,
+  diagnostics,
+}) {
+  let repair;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt)
+      await progress(
+        `${stage}: correcting source references (attempt ${attempt} of 2)`,
+      );
+    // Provider failures (quota, authentication, network) must escape without spending repair attempts.
+    const draft = await generate({
+      instructions,
+      input: JSON.stringify(repair ? { ...request, repair } : request),
+      model: settings.model,
+      schema: worksheetSchema(segments, settings),
+    });
+    try {
+      return validateWorksheet(parseResponse(draft), segments, settings, {
+        partial,
+      });
+    } catch (error) {
+      if (error.code !== "INVALID_WORKSHEET") throw error;
+      await diagnostics({
+        stage,
+        attempt: attempt + 1,
+        path: error.validationPath || "worksheet",
+        reason: error.message,
+      });
+      if (attempt === 2) {
+        error.userMessage =
+          "ChatGPT could not verify every worksheet item after two correction attempts. Your transcript and previous worksheet are saved. Retry the saved lesson or choose another available model.";
+        throw error;
+      }
+      repair = {
+        invalidPath: error.validationPath || "worksheet",
+        issue: error.message,
+        previousDraft: draft.slice(0, 160_000),
+        instruction:
+          "Return a corrected complete worksheet JSON object in the same schema. Preserve the requested question count, valid questions, selected kinds, and source coverage. Correct the indicated item and check every other item too. Every item must contain evidence: [{sourceId, quote}] with an exact contiguous quote from that source segment that supports its answer or premise. If a claim cannot be grounded, rewrite that item using the provided source; never invent or remove citations to pass validation. Include sections, flashcards, and quiz arrays, even when empty.",
+      };
+    }
+  }
+}
+
 export async function generateWorksheet({
   title,
   transcript,
@@ -222,11 +315,17 @@ export async function generateWorksheet({
   progress = async () => {},
   checkpoint = async () => {},
   cached = {},
-  chunkLimit = 22000,
+  chunkLimit,
+  diagnostics = async () => {},
 }) {
   settings = options(settings);
   const segments = sourceSegments(transcript);
-  const chunks = chunkSegments(segments, chunkLimit);
+  // Detailed lessons produce more items. Smaller source batches bound each draft
+  // while preserving full source coverage and the selected density.
+  const chunks = chunkSegments(
+    segments,
+    chunkLimit ?? (settings.density === "detailed" ? 6000 : 22000),
+  );
   const outputs = [],
     usedKeys = [];
   const rates = { main: 0.35, balanced: 0.7, detailed: 1.25 };
@@ -267,30 +366,38 @@ export async function generateWorksheet({
       source: chunk,
     };
     const key = createHash("sha256")
+      .update("worksheet-structured-v1")
       .update(instructions)
       .update(settings.model)
       .update(JSON.stringify(request))
       .digest("hex");
     usedKeys.push(key);
     let output = cached[key];
+    if (output) {
+      try {
+        output = validateWorksheet(output, chunk, localSettings, {
+          partial: true,
+        });
+      } catch (error) {
+        if (error.code !== "INVALID_WORKSHEET") throw error;
+        output = null;
+        cached[key] = null;
+        await checkpoint(key, null);
+      }
+    }
     if (!output) {
-      output = validateWorksheet(
-        parseResponse(
-          await generate({
-            instructions,
-            input: JSON.stringify(request),
-            model: settings.model,
-          }),
-        ),
-        chunk,
-        localSettings,
-        { partial: true },
-      );
-      await checkpoint(key, output);
-    } else
-      output = validateWorksheet(output, chunk, localSettings, {
+      output = await generateValidatedPart({
+        request,
+        segments: chunk,
+        settings: localSettings,
+        generate,
+        progress,
+        stage: `Part ${i + 1} of ${chunks.length}`,
+        diagnostics,
         partial: true,
       });
+      await checkpoint(key, output);
+    }
     outputs.push(
       gatherOnly
         ? {
@@ -344,6 +451,7 @@ export async function generateWorksheet({
       source: excerpts,
     };
     const key = createHash("sha256")
+      .update("worksheet-structured-v1")
       .update(instructions)
       .update(settings.model)
       .update(JSON.stringify(input))
@@ -355,20 +463,28 @@ export async function generateWorksheet({
       quiz: false,
     };
     let output = cached[key];
+    if (output) {
+      try {
+        output = validateWorksheet(output, excerpts, synthSettings);
+      } catch (error) {
+        if (error.code !== "INVALID_WORKSHEET") throw error;
+        output = null;
+        cached[key] = null;
+        await checkpoint(key, null);
+      }
+    }
     if (!output) {
-      output = validateWorksheet(
-        parseResponse(
-          await generate({
-            instructions,
-            input: JSON.stringify(input),
-            model: settings.model,
-          }),
-        ),
-        excerpts,
-        synthSettings,
-      );
+      output = await generateValidatedPart({
+        request: input,
+        segments: excerpts,
+        settings: synthSettings,
+        generate,
+        progress,
+        stage: "Whole-lesson sections",
+        diagnostics,
+      });
       await checkpoint(key, output);
-    } else output = validateWorksheet(output, excerpts, synthSettings);
+    }
     outputs.push(output);
   }
   const sections = settings.sections.flatMap((kind) => {

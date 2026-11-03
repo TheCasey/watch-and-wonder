@@ -408,3 +408,34 @@ test("SSE requires a completed event and supports CRLF split across byte chunks"
   });
   assert.equal(await readSummaryStream(new Response(body)), "ok");
 });
+
+test("worksheet schema is sent through the same plan-authenticated streaming request", async (t) => {
+  const env = await harness(t);
+  await env.connect();
+  const schema = {
+    type: "object",
+    properties: {
+      evidence: { type: "array", items: { type: "string" }, minItems: 1 },
+    },
+    required: ["evidence"],
+    additionalProperties: false,
+  };
+  await env.client.generate({
+    instructions: "Return worksheet JSON.",
+    input: "Source material",
+    schema,
+  });
+  assert.deepEqual(env.responseBody.text, {
+    format: {
+      type: "json_schema",
+      name: "learning_worksheet",
+      strict: true,
+      schema,
+    },
+  });
+  assert.equal(env.responseBody.store, false);
+  assert.equal(env.responseBody.stream, true);
+  assert.deepEqual(env.responseBody.input, [
+    { role: "user", content: "Source material" },
+  ]);
+});

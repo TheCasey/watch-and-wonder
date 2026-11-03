@@ -30,3 +30,11 @@ PDFs were rendered with Poppler and visually reviewed: four-page guided notes, f
 ## Limits of verification
 
 The live clips establish that this installation can retrieve those two public examples; they cannot guarantee every YouTube/PBS link, station, country, account, or future provider change. PBS LearningMedia is allowed by the importer but was not separately tested live. Long-script processing is tested with deterministic fixtures rather than a paid feature-length-film generation. Full accessibility PDF tagging, additional writing systems, and Windows/Linux desktop installers remain future work. This initial public release requires local dependency setup; it is not a notarized one-click installer.
+
+## Version 0.1.1: detailed-generation recovery
+
+The original detailed-generation failure was a model draft with an item missing its required evidence array. Previously any such error aborted the entire part immediately. Requests now use a strict structured-output schema that requires evidence on every item and restricts source IDs to the current part. Detailed sources also use smaller 6,000-character batches, with up to two automatic correction requests after model-output validation failures. Each correction receives the failing item's JSON path and the original source. The same strict source checks run again; invalid results are never cached. Provider/account/quota failures stop immediately. Invalid cached parts are discarded so a manual retry can recover.
+
+The expanded suite passes 36 tests. New regressions cover missing evidence, fabricated quotes, precise correction paths, malformed JSON/null items, repair exhaustion, quota errors without automatic retry, full ordered source coverage in smaller detailed batches, recovery from an invalid cache, and plan-authenticated structured-output transport. A live schema-constrained request with the connected ChatGPT plan was also verified.
+
+Live regression: the saved transcript for `https://youtu.be/Sc2iVJ2vOos` was regenerated with Detailed density, middle-school reading level, and only blanks/watch sections. All three parts passed on their first schema-constrained draft, producing 10 blanks and 12 watch questions. Both the student guided-notes PDF and teacher answer-key PDF exported successfully. No transcript reimport or deletion was required.

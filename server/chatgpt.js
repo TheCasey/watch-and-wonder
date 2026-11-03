@@ -627,7 +627,7 @@ export function createChatGPT({
     await save();
     return status();
   }
-  async function generate({ instructions, input, model }) {
+  async function generate({ instructions, input, model, schema }) {
     const account = await session();
     if (!account.scopes.includes(DIRECT_SCOPE))
       throw appError(
@@ -659,6 +659,18 @@ export function createChatGPT({
           store: false,
           stream: true,
           instructions,
+          ...(schema
+            ? {
+                text: {
+                  format: {
+                    type: "json_schema",
+                    name: "learning_worksheet",
+                    strict: true,
+                    schema,
+                  },
+                },
+              }
+            : {}),
           input:
             typeof input === "string"
               ? [{ role: "user", content: input }]

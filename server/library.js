@@ -87,6 +87,7 @@ export async function createLibrary({ dataDir, whisper, downloader, chatgpt }) {
               status: "generating",
               stage: "Preparing worksheet",
               error: null,
+              generationIssue: null,
             });
             const cacheFile = path.join(directory(id), "generation-cache.json");
             const cache = await readJSON(cacheFile, {});
@@ -101,6 +102,8 @@ export async function createLibrary({ dataDir, whisper, downloader, chatgpt }) {
                 await writeJSON(cacheFile, cache);
               },
               progress: (stage) => update(lesson, { stage }),
+              diagnostics: (generationIssue) =>
+                update(lesson, { generationIssue }),
             });
             const version = randomUUID();
             await writeJSON(

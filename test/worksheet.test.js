@@ -257,3 +257,191 @@ test("an incomplete final worksheet invalidates partial caches so retry can reco
   assert.equal(calls, 1);
   assert.equal(result.sections[0].kind, "watch");
 });
+
+test("missing evidence and invented quotes are corrected with precise feedback before saving a part", async () => {
+  const transcript = parseScript("Paper folds make a bridge stronger.");
+  const settings = { sections: ["watch"], flashcards: true, quiz: true };
+  const requests = [],
+    progress = [],
+    saved = [];
+  const result = await generateWorksheet({
+    title: "Bridge",
+    transcript,
+    settings,
+    progress: async (stage) => progress.push(stage),
+    checkpoint: async (key, value) => saved.push(value),
+    generate: async (request) => {
+      const input = JSON.parse(request.input);
+      requests.push(input);
+      const value = JSON.parse(fakeGeneration(request));
+      if (requests.length === 1) delete value.sections[0].items[0].evidence;
+      if (requests.length === 2)
+        value.flashcards[0].evidence[0].quote = "Not present in the source";
+      return JSON.stringify(value);
+    },
+  });
+  assert.equal(requests.length, 3);
+  assert.equal(requests[1].repair.invalidPath, "sections[0].items[0].evidence");
+  assert.equal(requests[2].repair.invalidPath, "flashcards[0].evidence");
+  assert.deepEqual(requests[1].source, requests[0].source);
+  assert.equal(saved.length, 1);
+  assert.equal(result.sections[0].items[0].evidence[0].quote, transcript.text);
+  assert.equal(
+    progress.filter((stage) => stage.includes("correcting source references"))
+      .length,
+    2,
+  );
+});
+
+test("invalid drafts stop after two correction attempts; quota failures are never automatically retried", async () => {
+  const transcript = parseScript("Paper folds make a bridge stronger.");
+  let calls = 0,
+    saves = 0;
+  await assert.rejects(
+    generateWorksheet({
+      title: "Bridge",
+      transcript,
+      settings: { sections: ["watch"] },
+      checkpoint: async () => {
+        saves++;
+      },
+      generate: async (request) => {
+        calls++;
+        const value = JSON.parse(fakeGeneration(request));
+        value.sections[0].items[0].evidence = [];
+        return JSON.stringify(value);
+      },
+    }),
+    (error) =>
+      error.code === "INVALID_WORKSHEET" &&
+      /two correction attempts/.test(error.userMessage),
+  );
+  assert.equal(calls, 3);
+  assert.equal(saves, 0);
+  calls = 0;
+  await assert.rejects(
+    generateWorksheet({
+      title: "Bridge",
+      transcript,
+      settings: { sections: ["watch"] },
+      generate: async () => {
+        calls++;
+        throw Object.assign(new Error("Plan limit reached"), {
+          code: "subscription_sharing_usage_limit_exceeded",
+        });
+      },
+    }),
+    /Plan limit/,
+  );
+  assert.equal(calls, 1);
+});
+
+test("malformed JSON and null questions are repairable model-format errors", async () => {
+  const transcript = parseScript("Paper folds make a bridge stronger.");
+  let calls = 0;
+  const result = await generateWorksheet({
+    title: "Bridge",
+    transcript,
+    settings: { sections: ["watch"] },
+    generate: async (request) => {
+      calls++;
+      if (calls === 1) return '{"sections":';
+      const value = JSON.parse(fakeGeneration(request));
+      if (calls === 2) value.sections[0].items[0] = null;
+      return JSON.stringify(value);
+    },
+  });
+  assert.equal(calls, 3);
+  assert.equal(result.sections[0].items.length, 1);
+});
+
+test("detailed generation uses smaller ordered batches without losing source coverage or density", async () => {
+  const transcript = {
+    segments: Array.from({ length: 18 }, (_, i) => ({
+      text: `Scene ${i}: ${"paper folds bridge load ".repeat(45)}`,
+    })),
+  };
+  const detailed = [],
+    main = [];
+  for (const [density, requests] of [
+    ["detailed", detailed],
+    ["main", main],
+  ])
+    await generateWorksheet({
+      title: "Bridge",
+      transcript,
+      settings: { sections: ["watch"], density },
+      generate: async (request) => {
+        requests.push(JSON.parse(request.input));
+        return fakeGeneration(request);
+      },
+    });
+  assert.ok(detailed.length > main.length);
+  assert.deepEqual(
+    detailed.flatMap((r) => r.source.map((s) => s.id)),
+    sourceSegments(transcript).map((s) => s.id),
+  );
+  assert.ok(
+    detailed.every(
+      (r) => r.source.reduce((n, s) => n + s.text.length, 0) <= 6000,
+    ),
+  );
+  assert.ok(
+    detailed.reduce((n, r) => n + r.targetDuringVideoQuestionsTotal, 0) >
+      main.reduce((n, r) => n + r.targetDuringVideoQuestionsTotal, 0),
+  );
+});
+
+test("an invalid cached part is discarded and regenerated instead of trapping retries", async () => {
+  const transcript = parseScript("Paper folds make a bridge stronger."),
+    cache = {};
+  const args = {
+    title: "Bridge",
+    transcript,
+    settings: { sections: ["watch"] },
+    cached: cache,
+    checkpoint: async (key, value) => {
+      cache[key] = value;
+    },
+  };
+  await generateWorksheet({
+    ...args,
+    generate: async (request) => fakeGeneration(request),
+  });
+  Object.values(cache)[0].sections[0].items[0].evidence = [];
+  let calls = 0;
+  const result = await generateWorksheet({
+    ...args,
+    generate: async (request) => {
+      calls++;
+      return fakeGeneration(request);
+    },
+  });
+  assert.equal(calls, 1);
+  assert.equal(result.sections[0].items[0].evidence.length, 1);
+});
+
+test("each generation request requires source evidence and restricts references to its own source part", async () => {
+  const transcript = parseScript("Paper folds make a bridge stronger.");
+  await generateWorksheet({
+    title: "Bridge",
+    transcript,
+    settings: { sections: ["watch"] },
+    generate: async (request) => {
+      const source = JSON.parse(request.input).source,
+        schema = request.schema;
+      const evidence = schema.$defs.question.properties.evidence;
+      assert.ok(schema.$defs.question.required.includes("evidence"));
+      assert.equal(evidence.minItems, 1);
+      assert.equal(evidence.maxItems, 8);
+      assert.deepEqual(
+        evidence.items.properties.sourceId.enum,
+        source.map((s) => s.id),
+      );
+      assert.deepEqual(evidence.items.required, ["sourceId", "quote"]);
+      assert.equal(schema.properties.flashcards.maxItems, 0);
+      assert.equal(schema.properties.quiz.maxItems, 0);
+      return fakeGeneration(request);
+    },
+  });
+});
