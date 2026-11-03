@@ -89,17 +89,7 @@ export async function renderPDF({ lesson, kind = "guided" }) {
   };
   const item = (entry, index, section) => {
     body();
-    const earliest = Math.min(
-      ...entry.evidence
-        .map((e) => lookup.get(e.sourceId)?.startMs)
-        .filter(Number.isFinite),
-    );
-    const cue =
-      Number.isFinite(earliest) &&
-      ["blanks", "watch", "sequence", "vocabulary"].includes(section)
-        ? ` [${timestamp(earliest)}]`
-        : "";
-    const label = `${index + 1}.${cue} ${entry.prompt}`;
+    const label = `${index + 1}. ${entry.prompt}`;
     const promptHeight = doc.heightOfString(label, { width, lineGap: 3 });
     const baseLines =
       { compact: 1, standard: 3, roomy: 5 }[lesson.settings.lines] || 3;

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2 - 2026-11-03
+
+- Remove timestamp prefixes from printed worksheet questions. Source timings remain available in the app and teacher answer-key references.
+
 ## 0.1.1 - 2026-11-03
 
 - Require source references in the model output schema and restrict IDs to the current source part.
